@@ -214,6 +214,7 @@ public class NanoHTTPD
 	MIME_HTML = "text/html",
 	MIME_DEFAULT_BINARY = "application/octet-stream",
 	MIME_XML = "text/xml";
+	boolean FORCE_DOWNLOAD = false;
 
 	// ==================================================
 	// Socket & server code
@@ -521,6 +522,7 @@ public class NanoHTTPD
 				int qmi = uri.indexOf( '?' );
 				if ( qmi >= 0 )
 				{
+          			FORCE_DOWNLOAD = uri.endsWith("forcedownload");
 					decodeParms( uri.substring( qmi+1 ), parms );
 					uri = decodePercent( uri.substring( 0, qmi ));
 				}
@@ -901,7 +903,6 @@ public class NanoHTTPD
 			boolean allowDirectoryListing )
 	{
 		Response res = null;
-        boolean forceDownload = false;
 
 		// Make sure we won't die of an exception later
 		if ( !homeDir.isDirectory())
@@ -913,7 +914,6 @@ public class NanoHTTPD
 			// Remove URL arguments
 			uri = uri.trim().replace( File.separatorChar, '/' );
 			if ( uri.indexOf( '?' ) >= 0 ) {
-                forceDownload = uri.endsWith("forceDownload");
 				uri = uri.substring(0, uri.indexOf( '?' ));
 			}
 
@@ -1018,7 +1018,7 @@ public class NanoHTTPD
 				int dot = f.getCanonicalPath().lastIndexOf( '.' );
 				if ( dot >= 0 )
 					mime = (String)theMimeTypes.get( f.getCanonicalPath().substring( dot + 1 ).toLowerCase());
-				if ( mime == null || forceDownload)
+				if ( mime == null || FORCE_DOWNLOAD)
 					mime = MIME_DEFAULT_BINARY;
 
 				// Calculate etag
@@ -1082,11 +1082,17 @@ public class NanoHTTPD
 				else
 				{
 					if (etag.equals(header.getProperty("if-none-match")))
-						res = new Response( HTTP_NOTMODIFIED, mime, "");
+						if(FORCE_DOWNLOAD){
+							res = new Response( HTTP_OK, mime, f.getInputStream());
+						} else {
+							res = new Response( HTTP_NOTMODIFIED, mime, "");
+						}
 					else
 					{
 						//res = new Response( HTTP_OK, mime, new FileInputStream( f ));
 						res = new Response( HTTP_OK, mime, f.getInputStream());
+						//mime = MIME_DEFAULT_BINARY;
+
 						res.addHeader( "Content-Length", "" + fileLen);
 						res.addHeader( "ETag", etag);
 					}
