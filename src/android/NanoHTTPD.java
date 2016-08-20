@@ -74,7 +74,7 @@ import android.util.Log;
 public class NanoHTTPD
 {
 	private final String LOGTAG = "NanoHTTPD";
-	
+
 	// ==================================================
 	// API parts
 	// ==================================================
@@ -101,14 +101,14 @@ public class NanoHTTPD
 			String value = (String)e.nextElement();
 			Log.i( LOGTAG, "  HDR: '" + value + "' = '" + header.getProperty( value ) + "'" );
 		}
-		
+
 		e = parms.propertyNames();
 		while ( e.hasMoreElements())
 		{
 			String value = (String)e.nextElement();
 			Log.i( LOGTAG, "  PRM: '" + value + "' = '" + parms.getProperty( value ) + "'" );
 		}
-		
+
 		e = files.propertyNames();
 		while ( e.hasMoreElements())
 		{
@@ -245,7 +245,7 @@ public class NanoHTTPD
 		myThread.setDaemon( true );
 		myThread.start();
 	}
-	
+
 	/**
 	 * Starts a HTTP server to given port.<p>
 	 * Throws an IOException if the socket is already in use
@@ -294,7 +294,7 @@ public class NanoHTTPD
 	{
 		PrintStream myOut = System.out;
 		PrintStream myErr = System.err;
-		
+
 		myOut.println( "NanoHTTPD 1.25 (C) 2001,2005-2011 Jarno Elonen and (C) 2010 Konstantinos Togias\n" +
 				"(Command line options: [-p port] [-d root-dir] [--licence])\n" );
 
@@ -427,7 +427,7 @@ public class NanoHTTPD
 
 				// If the method is POST, there may be parameters
 				// in data section, too, read it:
-				if ( method.equalsIgnoreCase( "POST" ))
+				if (method != null &&  method.equalsIgnoreCase( "POST" ))
 				{
 					String contentType = "";
 					String contentTypeHeader = header.getProperty("content-type");
@@ -466,16 +466,17 @@ public class NanoHTTPD
 					}
 				}
 
-				if ( method.equalsIgnoreCase( "PUT" ))
+				if (method != null && method.equalsIgnoreCase( "PUT" ))
 					files.put("content", saveTmpFile( fbuf, 0, f.size()));
 
 				// Ok, now do the serve()
+                if (method != null) {
 				Response r = serve( uri, method, header, parms, files );
-				if ( r == null )
+				if ( r == null ){
 					sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: Serve() returned a null response." );
-				else
-					sendResponse( r.status, r.mimeType, r.header, r.data );
-
+                }else{
+                    sendResponse( r.status, r.mimeType, r.header, r.data );}
+                }
 				in.close();
 				is.close();
 			}
@@ -900,18 +901,21 @@ public class NanoHTTPD
 			boolean allowDirectoryListing )
 	{
 		Response res = null;
-		
+        string forceDownload = false;
+
 		// Make sure we won't die of an exception later
 		if ( !homeDir.isDirectory())
 			res = new Response( HTTP_INTERNALERROR, MIME_PLAINTEXT,
-					"INTERNAL ERRROR: serveFile(): given homeDir is not a directory." );
+					"INTERNAL ERRROR: serveFile(): given homeDir:"+homeDir+" is not a directory." );
 
 		if ( res == null )
 		{
 			// Remove URL arguments
 			uri = uri.trim().replace( File.separatorChar, '/' );
-			if ( uri.indexOf( '?' ) >= 0 )
+			if ( uri.indexOf( '?' ) >= 0 ) {
+                forceDownload = uri.endsWith("forceDownload");
 				uri = uri.substring(0, uri.indexOf( '?' ));
+			}
 
 			// Prohibit getting out of current directory
 			if ( uri.startsWith( ".." ) || uri.endsWith( ".." ) || uri.indexOf( "../" ) >= 0 )
@@ -936,11 +940,12 @@ public class NanoHTTPD
 						"<html><body>Redirected: <a href=\"" + uri + "\">" +
 								uri + "</a></body></html>");
 				res.addHeader( "Location", uri );
+                res.addHeader( "Access-Control-Allow-Origin", "*" );
 			}
 
 			if ( res == null )
 			{
-				// First try index.html and index.htm 
+				// First try index.html and index.htm
 				if ( new AndroidFile( f, "index.html" ).exists())
 					f = new AndroidFile( homeDir, uri + "/index.html" );
 				else if ( new AndroidFile( f, "index.htm" ).exists())
@@ -994,6 +999,7 @@ public class NanoHTTPD
 					}
 					msg += "</body></html>";
 					res = new Response( HTTP_OK, MIME_HTML, msg );
+                    res.addHeader( "Access-Control-Allow-Origin", "*" );
 				}
 				else
 				{
@@ -1012,12 +1018,12 @@ public class NanoHTTPD
 				int dot = f.getCanonicalPath().lastIndexOf( '.' );
 				if ( dot >= 0 )
 					mime = (String)theMimeTypes.get( f.getCanonicalPath().substring( dot + 1 ).toLowerCase());
-				if ( mime == null )
+				if ( mime == null || forceDownload)
 					mime = MIME_DEFAULT_BINARY;
 
 				// Calculate etag
 				String etag = Integer.toHexString((f.getAbsolutePath() + f.lastModified() + "" + f.length()).hashCode());
-				
+
 				//System.out.println( String.format("mime: %s, etag: %s", mime, etag));
 
 				// Support (simple) skipping:
@@ -1044,7 +1050,7 @@ public class NanoHTTPD
 				// Change return code and add Content-Range header when skipping is requested
 				long fileLen = f.length();
 				//System.out.println( String.format("file length: %d", fileLen));
-				
+
 				if (range != null && startFrom >= 0)
 				{
 					if ( startFrom >= fileLen)
@@ -1133,7 +1139,7 @@ public class NanoHTTPD
 	}
 
 	private static int theBufferSize = 16 * 1024;
-	
+
 	/**
 	 * GMT date formatter
 	 */
@@ -1174,4 +1180,3 @@ public class NanoHTTPD
 					"(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\n"+
 					"OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 }
-
