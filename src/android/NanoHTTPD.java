@@ -901,7 +901,7 @@ public class NanoHTTPD
 			boolean allowDirectoryListing )
 	{
 		Response res = null;
-        string forceDownload = false;
+        String forceDownload = false;
 
 		// Make sure we won't die of an exception later
 		if ( !homeDir.isDirectory())
