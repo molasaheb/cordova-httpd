@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -49,7 +50,7 @@ public class CorHttpd extends CordovaPlugin {
 
     private String localPath = "";
     private WebServer server = null;
-    private List<WebServer> webServers;
+    private ArrayList<WebServer> webServers = new ArrayList<WebServer>();
     private String url = "";
 
     @Override
