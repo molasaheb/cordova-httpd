@@ -1,4 +1,4 @@
-package com.rjfun.cordova.httpd;
+package com.techprd.cordova.httpd;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -9,6 +9,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Collections;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
@@ -80,15 +81,17 @@ public class CorHttpd extends CordovaPlugin {
 
     private String __getLocalIpAddress() {
         try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
-                NetworkInterface intf = en.nextElement();
-                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
-                    InetAddress inetAddress = enumIpAddr.nextElement();
-                    if (!inetAddress.isLoopbackAddress()) {
-                        if (inetAddress instanceof Inet4Address) {
-                            String ip = inetAddress.getHostAddress();
-                            Log.w(LOGTAG, "local IP: " + ip);
-                            return ip;
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface intf : interfaces) {
+                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                for (InetAddress addr : addrs) {
+                    if (!addr.isLoopbackAddress()) {
+                        if (addr instanceof Inet4Address) {
+                            String sAddr = addr.getHostAddress().toUpperCase();
+                            if (intf.getDisplayName().startsWith("wlan")) {
+                                Log.w(LOGTAG, "local IP: " + sAddr);
+                                return sAddr;
+                            }
                         }
                     }
                 }

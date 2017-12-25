@@ -3,7 +3,7 @@
  * Copyright (c) 2015 Joel De La Torriente - jjdltc - http://www.jjdltc.com/
  * See a full copy of license in the root folder of the project
  */
-package com.rjfun.cordova.httpd;
+package com.techprd.cordova.httpd;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
