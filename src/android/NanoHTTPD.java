@@ -7,12 +7,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketAddress;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.Date;
 import java.util.Enumeration;
@@ -27,54 +27,12 @@ import java.io.FileOutputStream;
 
 import org.json.JSONObject;
 import org.json.JSONException;
+
 import android.util.Log;
 
-/**
- * A simple, tiny, nicely embeddable HTTP 1.0 (partially 1.1) server in Java
- * <p>
- * <p> NanoHTTPD version 1.25,
- * Copyright &copy; 2001,2005-2012 Jarno Elonen (elonen@iki.fi, http://iki.fi/elonen/)
- * and Copyright &copy; 2010 Konstantinos Togias (info@ktogias.gr, http://ktogias.gr)
- * <p>
- * <p><b>Features + limitations: </b><ul>
- * <p>
- * <li> Only one Java file </li>
- * <li> Java 1.1 compatible </li>
- * <li> Released as open source, Modified BSD licence </li>
- * <li> No fixed config files, logging, authorization etc. (Implement yourself if you need them.) </li>
- * <li> Supports parameter parsing of GET and POST methods (+ rudimentary PUT support in 1.25) </li>
- * <li> Supports both dynamic content and file serving </li>
- * <li> Supports file upload (since version 1.2, 2010) </li>
- * <li> Supports partial content (streaming)</li>
- * <li> Supports ETags</li>
- * <li> Never caches anything </li>
- * <li> Doesn't limit bandwidth, request time or simultaneous connections </li>
- * <li> Default code serves files and shows all HTTP parameters and headers</li>
- * <li> File server supports directory listing, index.html and index.htm</li>
- * <li> File server supports partial content (streaming)</li>
- * <li> File server supports ETags</li>
- * <li> File server does the 301 redirection trick for directories without '/'</li>
- * <li> File server supports simple skipping for files (continue download) </li>
- * <li> File server serves also very long files without memory overhead </li>
- * <li> Contains a built-in list of most common mime types </li>
- * <li> All header names are converted lowercase so they don't vary between browsers/clients </li>
- * <p>
- * </ul>
- * <p>
- * <p><b>Ways to use: </b><ul>
- * <p>
- * <li> Run as a standalone app, serves files and shows requests</li>
- * <li> Subclass serve() and embed to your own program </li>
- * <li> Call serveFile() from serve() with your own base directory </li>
- * <p>
- * </ul>
- * <p>
- * See the end of the source file for distribution license
- * (Modified BSD licence)
- */
 @SuppressWarnings("unchecked")
 public class NanoHTTPD {
-    private final String LOGTAG = "NanoHTTPD";
+    private final String LOG_TAG = "NanoHTTPD";
 
     // ==================================================
     // API parts
@@ -93,9 +51,9 @@ public class NanoHTTPD {
      */
     @SuppressWarnings("rawtypes")
     public Response serve(String uri, String method, Properties header, Properties parms, Properties files) throws IOException {
-        Log.i(LOGTAG, method + " '" + uri + "' ");
-        Log.i(LOGTAG, "root directory" + " '" + myRootDir + "' ");
-        Log.i(LOGTAG, "zip download" + " '" + ZIP_DOWNLOAD + "' ");
+        Log.i(LOG_TAG, method + " '" + uri + "' ");
+        Log.i(LOG_TAG, "root directory" + " '" + myRootDir + "' ");
+        Log.i(LOG_TAG, "zip download" + " '" + ZIP_DOWNLOAD + "' ");
         if (ZIP_DOWNLOAD) {
             JSONObject options = new JSONObject();
             try {
@@ -113,36 +71,28 @@ public class NanoHTTPD {
                 return serveFile(uri, header, myRootDir, true);
             }
 
-            //return new Response(HTTP_OK, mime, "/filetransfer.zip?forcedownload");
-            //FORCE_DOWNLOAD = true;
-
-            //AndroidFile f = new AndroidFile(myRootDir + uri);
-            //return serveFile(uri, header, myRootDir, true);
-            // return new Response(HTTP_OK, MIME_DEFAULT_BINARY, f.getInputStream());
+        } else if (uri.contains("dashboard")) {
+            return serveFile("/", header, myRootDir, true);
         } else {
+//            Enumeration e = header.propertyNames();
+//            while (e.hasMoreElements()) {
+//                String value = (String) e.nextElement();
+//                Log.i(LOG_TAG, "  HDR: '" + value + "' = '" + header.getProperty(value) + "'");
+//            }
+//
+//            e = parms.propertyNames();
+//            while (e.hasMoreElements()) {
+//                String value = (String) e.nextElement();
+//                Log.i(LOG_TAG, "  PRM: '" + value + "' = '" + parms.getProperty(value) + "'");
+//            }
+//
+//            e = files.propertyNames();
+//            while (e.hasMoreElements()) {
+//                String value = (String) e.nextElement();
+//                Log.i(LOG_TAG, "  UPLOADED: '" + value + "' = '" + files.getProperty(value) + "'");
+//            }
             return serveFile(uri, header, myRootDir, true);
         }
-
-/*		Enumeration e = header.propertyNames();
-        while ( e.hasMoreElements())
-		{
-			String value = (String)e.nextElement();
-			Log.i( LOGTAG, "  HDR: '" + value + "' = '" + header.getProperty( value ) + "'" );
-		}
-
-		e = parms.propertyNames();
-		while ( e.hasMoreElements())
-		{
-			String value = (String)e.nextElement();
-			Log.i( LOGTAG, "  PRM: '" + value + "' = '" + parms.getProperty( value ) + "'" );
-		}
-
-		e = files.propertyNames();
-		while ( e.hasMoreElements())
-		{
-			String value = (String)e.nextElement();
-			Log.i( LOGTAG, "  UPLOADED: '" + value + "' = '" + files.getProperty( value ) + "'" );
-		}*/
 
     }
 
@@ -295,48 +245,6 @@ public class NanoHTTPD {
         }
     }
 
-
-    /**
-     * Starts as a standalone file server and waits for Enter.
-     */
-    public static void main(String[] args) {
-        PrintStream myOut = System.out;
-        PrintStream myErr = System.err;
-
-        myOut.println("NanoHTTPD 1.25 (C) 2001,2005-2011 Jarno Elonen and (C) 2010 Konstantinos Togias\n" +
-                "(Command line options: [-p port] [-d root-dir] [--licence])\n");
-
-        // Defaults
-        int port = 80;
-        File wwwroot = new File(".").getAbsoluteFile();
-
-        // Show licence if requested
-        for (int i = 0; i < args.length; ++i)
-            if (args[i].equalsIgnoreCase("-p"))
-                port = Integer.parseInt(args[i + 1]);
-            else if (args[i].equalsIgnoreCase("-d"))
-                wwwroot = new File(args[i + 1]).getAbsoluteFile();
-            else if (args[i].toLowerCase().endsWith("licence")) {
-                myOut.println(LICENCE + "\n");
-                break;
-            }
-
-        try {
-            new NanoHTTPD(port, new AndroidFile(wwwroot.getPath()));
-        } catch (IOException ioe) {
-            myErr.println("Couldn't start server:\n" + ioe);
-            System.exit(-1);
-        }
-
-        myOut.println("Now serving files in port " + port + " from \"" + wwwroot + "\"");
-        myOut.println("Hit Enter to stop.\n");
-
-        try {
-            System.in.read();
-        } catch (Throwable t) {
-        }
-    }
-
     /**
      * Handles one session, i.e. parses the HTTP request
      * and returns the response.
@@ -392,6 +300,7 @@ public class NanoHTTPD {
                     try {
                         size = Integer.parseInt(contentLength);
                     } catch (NumberFormatException ex) {
+                        ex.printStackTrace();
                     }
                 }
 
@@ -448,7 +357,7 @@ public class NanoHTTPD {
                         st.nextToken();
                         String boundary = st.nextToken();
 
-                        decodeMultipartData(boundary, fbuf, in, parms, files);
+                        decodeMultipartData(uri, boundary, fbuf, in, parms, files);
                     } else {
                         // Handle application/x-www-form-urlencoded
                         String postLine = "";
@@ -463,8 +372,8 @@ public class NanoHTTPD {
                     }
                 }
 
-                if (method != null && method.equalsIgnoreCase("PUT"))
-                    files.put("content", saveTmpFile(fbuf, 0, f.size()));
+                // if (method != null && method.equalsIgnoreCase("PUT"))
+                //   files.put("filePath", saveTmpFile(fbuf, 0, f.size()));
 
                 // Ok, now do the serve()
                 if (method != null) {
@@ -481,6 +390,7 @@ public class NanoHTTPD {
                 try {
                     sendError(HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
                 } catch (Throwable t) {
+                    t.printStackTrace();
                 }
             } catch (InterruptedException ie) {
                 // Thrown by sendError, ignore and exit the thread.
@@ -515,8 +425,8 @@ public class NanoHTTPD {
                     FORCE_DOWNLOAD = uri.endsWith("forcedownload");
                     ZIP_DOWNLOAD = uri.endsWith("zipdownload");
                     decodeParms(uri.substring(qmi + 1), parms);
-                    uri = decodePercent(uri.substring(0, qmi));
-                } else uri = decodePercent(uri);
+                    uri = decodeUri(uri.substring(0, qmi));
+                } else uri = decodeUri(uri);
 
                 // If there's another token, it's protocol version,
                 // followed by HTTP headers. Ignore version but parse headers.
@@ -542,14 +452,14 @@ public class NanoHTTPD {
          * Decodes the Multipart Body data and put it
          * into java Properties' key - value pairs.
          **/
-        private void decodeMultipartData(String boundary, byte[] fbuf, BufferedReader in, Properties parms, Properties files)
+        private void decodeMultipartData(String uri, String boundary, byte[] fbuf, BufferedReader in, Properties parms, Properties files)
                 throws InterruptedException {
             try {
                 int[] bpositions = getBoundaryPositions(fbuf, boundary.getBytes());
                 int boundarycount = 1;
                 String mpline = in.readLine();
                 while (mpline != null) {
-                    if (mpline.indexOf(boundary) == -1)
+                    if (!mpline.contains(boundary))
                         sendError(HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but next chunk does not start with boundary. Usage: GET /example/file.html");
                     boundarycount++;
                     Properties item = new Properties();
@@ -565,10 +475,11 @@ public class NanoHTTPD {
                         if (contentDisposition == null) {
                             sendError(HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but no content-disposition info found. Usage: GET /example/file.html");
                         }
-                        StringTokenizer st = new StringTokenizer(contentDisposition, "; ");
+                        StringTokenizer st = new StringTokenizer(contentDisposition, ";");
                         Properties disposition = new Properties();
                         while (st.hasMoreTokens()) {
                             String token = st.nextToken();
+                            Log.e(LOG_TAG, "token: " + token);
                             int p = token.indexOf('=');
                             if (p != -1)
                                 disposition.put(token.substring(0, p).trim().toLowerCase(), token.substring(p + 1).trim());
@@ -576,31 +487,31 @@ public class NanoHTTPD {
                         String pname = disposition.getProperty("name");
                         pname = pname.substring(1, pname.length() - 1);
 
-                        String value = "";
+                        StringBuilder value = new StringBuilder();
                         if (item.getProperty("content-type") == null) {
-                            while (mpline != null && mpline.indexOf(boundary) == -1) {
+                            while (mpline != null && !mpline.contains(boundary)) {
                                 mpline = in.readLine();
                                 if (mpline != null) {
                                     int d = mpline.indexOf(boundary);
                                     if (d == -1)
-                                        value += mpline;
+                                        value.append(mpline);
                                     else
-                                        value += mpline.substring(0, d - 2);
+                                        value.append(mpline, 0, d - 2);
                                 }
                             }
                         } else {
                             if (boundarycount > bpositions.length)
                                 sendError(HTTP_INTERNALERROR, "Error processing request");
                             int offset = stripMultipartHeaders(fbuf, bpositions[boundarycount - 2]);
-                            String path = saveTmpFile(fbuf, offset, bpositions[boundarycount - 1] - offset - 4);
+                            String path = saveTmpFile(uri, pname, fbuf, offset, bpositions[boundarycount - 1] - offset - 4);
                             files.put(pname, path);
-                            value = disposition.getProperty("filename");
-                            value = value.substring(1, value.length() - 1);
+                            value = new StringBuilder(disposition.getProperty("filename"));
+                            value = new StringBuilder(value.substring(1, value.length() - 1));
                             do {
                                 mpline = in.readLine();
-                            } while (mpline != null && mpline.indexOf(boundary) == -1);
+                            } while (mpline != null && !mpline.contains(boundary));
                         }
-                        parms.put(pname, value);
+                        parms.put(pname, value.toString());
                     }
                 }
             } catch (IOException ioe) {
@@ -636,7 +547,7 @@ public class NanoHTTPD {
                         matchbyte = i;
                     matchcount++;
                     if (matchcount == boundary.length) {
-                        matchbytes.addElement(new Integer(matchbyte));
+                        matchbytes.addElement(matchbyte);
                         matchcount = 0;
                         matchbyte = -1;
                     }
@@ -648,7 +559,7 @@ public class NanoHTTPD {
             }
             int[] ret = new int[matchbytes.size()];
             for (int i = 0; i < ret.length; i++) {
-                ret[i] = ((Integer) matchbytes.elementAt(i)).intValue();
+                ret[i] = (Integer) matchbytes.elementAt(i);
             }
             return ret;
         }
@@ -658,18 +569,28 @@ public class NanoHTTPD {
          * to a temporary file.
          * The full path to the saved file is returned.
          **/
-        private String saveTmpFile(byte[] b, int offset, int len) {
+        private String saveTmpFile(String uri, String filename, byte[] b, int offset, int len) {
             String path = "";
             if (len > 0) {
-                String tmpdir = System.getProperty("java.io.tmpdir");
+
                 try {
-                    File temp = File.createTempFile("NanoHTTPD", "", new File(tmpdir));
-                    OutputStream fstream = new FileOutputStream(temp);
-                    fstream.write(b, offset, len);
-                    fstream.close();
-                    path = temp.getAbsolutePath();
+                    AndroidFile dir = new AndroidFile(myRootDir, uri);
+                    File temp = new File(dir, filename);
+
+                    Log.d(LOG_TAG, "can dir write: " + dir.getAbsolutePath() + " " + dir.canWrite());
+                    boolean created = temp.createNewFile();
+                    if (created) {
+                        Log.d(LOG_TAG, "  saveTmpFile: writing to file now");
+                        OutputStream fstream = new FileOutputStream(temp);
+                        fstream.write(b, offset, len);
+                        fstream.close();
+                        path = temp.getAbsolutePath();
+                    } else {
+                        Log.e(LOG_TAG, " Failed to create file");
+                    }
+
                 } catch (Exception e) { // Catch exception if any
-                    Log.e(LOGTAG, "Error: " + e.getMessage());
+                    Log.e(LOG_TAG, "Error: " + e.getMessage());
                 }
             }
             return path;
@@ -689,13 +610,38 @@ public class NanoHTTPD {
             return i + 1;
         }
 
+        private String decodeUri(String uri) {
+            StringBuilder newUri = new StringBuilder();
+            StringTokenizer st = new StringTokenizer(uri, "/ ", true);
+            while (st.hasMoreTokens()) {
+                String tok = st.nextToken();
+                switch (tok) {
+                    case "/":
+                        newUri.append("/");
+                        break;
+                    case "%20":
+                        newUri.append(" ");
+                        break;
+                    default:
+                        try {
+                            newUri.append(URLDecoder.decode(tok, "UTF-8"));
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                }
+            }
+            return newUri.toString();
+        }
+
         /**
          * Decodes the percent encoding scheme. <br/>
          * For example: "an+example%20string" -> "an example string"
          */
         private String decodePercent(String str) throws InterruptedException {
+
             try {
-                StringBuffer sb = new StringBuffer();
+                StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < str.length(); i++) {
                     char c = str.charAt(i);
                     switch (c) {
@@ -799,6 +745,7 @@ public class NanoHTTPD {
                 try {
                     mySocket.close();
                 } catch (Throwable t) {
+                    t.printStackTrace();
                 }
             }
         }
@@ -810,23 +757,30 @@ public class NanoHTTPD {
      * URL-encodes everything between "/"-characters.
      * Encodes spaces as '%20' instead of '+'.
      */
-    @SuppressWarnings("deprecation")
     private String encodeUri(String uri) {
-        String newUri = "";
+        StringBuilder newUri = new StringBuilder();
         StringTokenizer st = new StringTokenizer(uri, "/ ", true);
         while (st.hasMoreTokens()) {
             String tok = st.nextToken();
-            if (tok.equals("/"))
-                newUri += "/";
-            else if (tok.equals(" "))
-                newUri += "%20";
-            else {
-                newUri += URLEncoder.encode(tok);
-                // For Java 1.4 you'll want to use this instead:
-                // try { newUri += URLEncoder.encode( tok, "UTF-8" ); } catch ( java.io.UnsupportedEncodingException uee ) {}
+            switch (tok) {
+                case "/":
+                    newUri.append("/");
+                    break;
+                case " ":
+                    newUri.append("%20");
+                    break;
+                default:
+                    try {
+                        newUri.append(URLEncoder.encode(tok, "UTF-8"));
+                    } catch (UnsupportedEncodingException e) {
+                        e.printStackTrace();
+                    }
+                    // For Java 1.4 you'll want to use this instead:
+                    // try { newUri += URLEncoder.encode( tok, "UTF-8" ); } catch ( java.io.UnsupportedEncodingException uee ) {}
+                    break;
             }
         }
-        return newUri;
+        return newUri.toString();
     }
 
     private int myTcpPort;
@@ -859,14 +813,13 @@ public class NanoHTTPD {
             }
 
             // Prohibit getting out of current directory
-            if (uri.startsWith("..") || uri.endsWith("..") || uri.indexOf("../") >= 0)
+            if (uri.startsWith("..") || uri.endsWith("..") || uri.contains("../"))
                 res = new Response(HTTP_FORBIDDEN, MIME_PLAINTEXT,
                         "FORBIDDEN: Won't serve ../ for security reasons.");
         }
-
         AndroidFile f = new AndroidFile(homeDir, uri);
-        Log.i(LOGTAG, " innner uri: " + uri);
-        Log.i(LOGTAG, " innner res: " + res);
+        Log.d(LOG_TAG, " serveFile uri: " + uri);
+        Log.d(LOG_TAG, " serveFile res: " + res);
         if (res == null && !f.exists())
             res = new Response(HTTP_NOTFOUND, MIME_PLAINTEXT,
                     "Error 404, file not found.");
@@ -882,6 +835,7 @@ public class NanoHTTPD {
                                 uri + "</a></body></html>");
                 res.addHeader("Location", uri);
                 res.addHeader("Access-Control-Allow-Origin", "*");
+                res.addHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type");
             }
 
             if (res == null) {
@@ -893,13 +847,13 @@ public class NanoHTTPD {
                     // No index file, list the directory if it is readable
                 else if (allowDirectoryListing && f.canRead()) {
                     String[] files = f.list();
-                    String msg = "<html><body><h1>Directory " + uri + "</h1><br/>";
+                    StringBuilder msg = new StringBuilder("<html><body><h1>Directory " + uri + "</h1><br/>");
 
                     if (uri.length() > 1) {
                         String u = uri.substring(0, uri.length() - 1);
                         int slash = u.lastIndexOf('/');
                         if (slash >= 0 && slash < u.length())
-                            msg += "<b><a href=\"" + uri.substring(0, slash + 1) + "\">..</a></b><br/>";
+                            msg.append("<b><a href=\"").append(uri.substring(0, slash + 1)).append("\">..</a></b><br/>");
                     }
 
                     if (files != null) {
@@ -907,33 +861,37 @@ public class NanoHTTPD {
                             AndroidFile curFile = new AndroidFile(f, files[i]);
                             boolean dir = curFile.isDirectory();
                             if (dir) {
-                                msg += "<b>";
+                                msg.append("<b>");
                                 files[i] += "/";
                             }
 
-                            msg += "<a href=\"" + encodeUri(uri + files[i]) + "\">" +
-                                    files[i] + "</a>";
+                            msg.append("<a href=\"")
+                                    .append(
+                                            encodeUri(uri + files[i])).append("\">")
+                                    .append(files[i])
+                                    .append("</a>");
 
                             // Show file size
                             if (curFile.isFile()) {
                                 long len = curFile.length();
-                                msg += " &nbsp;<font size=2>(";
+                                msg.append(" &nbsp;<font size=2>(");
                                 if (len < 1024)
-                                    msg += len + " bytes";
+                                    msg.append(len).append(" bytes");
                                 else if (len < 1024 * 1024)
-                                    msg += len / 1024 + "." + (len % 1024 / 10 % 100) + " KB";
+                                    msg.append(len / 1024).append(".").append(len % 1024 / 10 % 100).append(" KB");
                                 else
-                                    msg += len / (1024 * 1024) + "." + len % (1024 * 1024) / 10 % 100 + " MB";
+                                    msg.append(len / (1024 * 1024)).append(".").append(len % (1024 * 1024) / 10 % 100).append(" MB");
 
-                                msg += ")</font>";
+                                msg.append(")</font>");
                             }
-                            msg += "<br/>";
-                            if (dir) msg += "</b>";
+                            msg.append("<br/>");
+                            if (dir) msg.append("</b>");
                         }
                     }
-                    msg += "</body></html>";
-                    res = new Response(HTTP_OK, MIME_HTML, msg);
+                    msg.append("</body></html>");
+                    res = new Response(HTTP_OK, MIME_HTML, msg.toString());
                     res.addHeader("Access-Control-Allow-Origin", "*");
+                    res.addHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type");
                 } else {
                     res = new Response(HTTP_FORBIDDEN, MIME_PLAINTEXT,
                             "FORBIDDEN: No directory listing.");
@@ -970,6 +928,7 @@ public class NanoHTTPD {
                                 endAt = Long.parseLong(range.substring(minus + 1));
                             }
                         } catch (NumberFormatException nfe) {
+                            nfe.printStackTrace();
                         }
                     }
                 }
@@ -1024,6 +983,7 @@ public class NanoHTTPD {
 
         res.addHeader("Accept-Ranges", "bytes"); // Announce that the file server accepts partial content requestes
         res.addHeader("Access-Control-Allow-Origin", "*");
+        res.addHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type");
         return res;
     }
 
@@ -1075,33 +1035,4 @@ public class NanoHTTPD {
         gmtFrmt.setTimeZone(TimeZone.getTimeZone("GMT"));
     }
 
-    /**
-     * The distribution licence
-     */
-    private static final String LICENCE =
-            "Copyright (C) 2001,2005-2011 by Jarno Elonen <elonen@iki.fi>\n" +
-                    "and Copyright (C) 2010 by Konstantinos Togias <info@ktogias.gr>\n" +
-                    "\n" +
-                    "Redistribution and use in source and binary forms, with or without\n" +
-                    "modification, are permitted provided that the following conditions\n" +
-                    "are met:\n" +
-                    "\n" +
-                    "Redistributions of source code must retain the above copyright notice,\n" +
-                    "this list of conditions and the following disclaimer. Redistributions in\n" +
-                    "binary form must reproduce the above copyright notice, this list of\n" +
-                    "conditions and the following disclaimer in the documentation and/or other\n" +
-                    "materials provided with the distribution. The name of the author may not\n" +
-                    "be used to endorse or promote products derived from this software without\n" +
-                    "specific prior written permission. \n" +
-                    " \n" +
-                    "THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR\n" +
-                    "IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES\n" +
-                    "OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.\n" +
-                    "IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,\n" +
-                    "INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT\n" +
-                    "NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,\n" +
-                    "DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY\n" +
-                    "THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT\n" +
-                    "(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\n" +
-                    "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 }
