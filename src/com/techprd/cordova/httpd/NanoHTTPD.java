@@ -1,4 +1,4 @@
-package src.android;
+package src.com.techprd.cordova.httpd;
 
 import android.util.Log;
 import org.json.JSONException;
@@ -10,7 +10,7 @@ import java.util.*;
 
 @SuppressWarnings("unchecked")
 public class NanoHTTPD {
-    private final String LOG_TAG = "NanoHTTPD";
+    private final String LOG_TAG = "NanoHTTPD2";
 
     // ==================================================
     // API parts

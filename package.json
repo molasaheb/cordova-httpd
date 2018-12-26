@@ -1,0 +1,38 @@
+{
+  "name": "cordova-httpd",
+  "description": "Embeded httpd for cordova.",
+  "version": "1.0.0",
+  "homepage": "https://github.com/techprd/cordova-httpd#readme",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/techprd/cordova-httpd.git"
+  },
+  "bugs": {
+    "url": "https://github.com/techprd/cordova-httpd/issues"
+  },
+  "cordova": {
+    "id": "com.techprd.cordova.httpd",
+    "platforms": [
+      "ios",
+      "android",
+      "osx"
+    ]
+  },
+  "keywords": [
+    "ecosystem:cordova",
+    "ecosystem:phonegap",
+    "cordova-ios",
+    "cordova-android",
+    "cordova-osx"
+  ],
+  "engines": [
+    {
+      "name": "cordova",
+      "version": ">=3.0.0"
+    }
+  ],
+  "author": "TECHPRD",
+  "license": "MIT",
+  "scripts": {},
+  "devDependencies": {}
+}

@@ -1,4 +1,4 @@
-package src.android;
+package src.com.techprd.cordova.httpd;
 
 import android.content.res.AssetManager;
 import android.util.Log;
