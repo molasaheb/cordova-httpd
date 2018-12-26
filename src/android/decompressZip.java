@@ -1,9 +1,4 @@
-/*
- * The MIT License (MIT)
- * Copyright (c) 2015 Joel De La Torriente - jjdltc - http://www.jjdltc.com/
- * See a full copy of license in the root folder of the project
- */
-package com.techprd.cordova.httpd;
+package src.android;
 
 import org.json.JSONObject;
 
@@ -17,39 +12,39 @@ import java.util.zip.ZipInputStream;
 
 public class decompressZip {
 
-    private String sourceEntry  = "";
-    private String targetPath   = "";
-    private final int BUFFER_SIZE = 2048;
+    private String sourceEntry = "";
+    private String targetPath = "";
 
     public decompressZip(JSONObject opts) {
-        this.sourceEntry    = opts.optString("sourceEntry");
-        this.targetPath     = opts.optString("targetPath");
+        this.sourceEntry = opts.optString("sourceEntry");
+        this.targetPath = opts.optString("targetPath");
     }
-    
-    public boolean unZip(){
+
+    public boolean unZip() {
         boolean result = false;
         try {
             result = this.doUnZip(this.targetPath);
         } catch (IOException e) {
-            result = false;
+            e.printStackTrace();
         }
         return result;
     }
-    
+
     /**
      * Extracts a zip file to a given path
-     * @param actualTargetPath  Path to un-zip
+     *
+     * @param actualTargetPath Path to un-zip
      * @throws IOException
-     */ 
-    public boolean doUnZip(String actualTargetPath) throws IOException{
+     */
+    public boolean doUnZip(String actualTargetPath) throws IOException {
         File target = new File(actualTargetPath);
         if (!target.exists()) {
             target.mkdir();
         }
-        
-        ZipInputStream zipFl= new ZipInputStream(new FileInputStream(this.sourceEntry));
-        ZipEntry entry      = zipFl.getNextEntry();
-        
+
+        ZipInputStream zipFl = new ZipInputStream(new FileInputStream(this.sourceEntry));
+        ZipEntry entry = zipFl.getNextEntry();
+
         while (entry != null) {
             String filePath = actualTargetPath + File.separator + entry.getName();
             if (entry.isDirectory()) {
@@ -67,13 +62,15 @@ public class decompressZip {
 
     /**
      * Extracts a file
-     * @param zipIn
+     *
+     * @param zipFl
      * @param filePath
      * @throws IOException
      */
     private void extractFile(ZipInputStream zipFl, String filePath) throws IOException {
         BufferedOutputStream buffer = new BufferedOutputStream(new FileOutputStream(filePath));
-        byte[] bytesIn = new byte[this.BUFFER_SIZE];
+        int BUFFER_SIZE = 2048;
+        byte[] bytesIn = new byte[BUFFER_SIZE];
         int read = 0;
         while ((read = zipFl.read(bytesIn)) != -1) {
             buffer.write(bytesIn, 0, read);

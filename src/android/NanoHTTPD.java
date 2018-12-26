@@ -1,34 +1,12 @@
-package com.techprd.cordova.httpd;
-
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.Vector;
-import java.util.Hashtable;
-import java.util.Locale;
-import java.util.Properties;
-import java.util.StringTokenizer;
-import java.util.TimeZone;
-import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
-
-import org.json.JSONObject;
-import org.json.JSONException;
+package src.android;
 
 import android.util.Log;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.*;
+import java.net.*;
+import java.util.*;
 
 @SuppressWarnings("unchecked")
 public class NanoHTTPD {
@@ -205,6 +183,7 @@ public class NanoHTTPD {
                     while (true)
                         new HTTPSession(myServerSocket.accept());
                 } catch (IOException ioe) {
+                    ioe.printStackTrace();
                 }
             }
         });
@@ -226,6 +205,7 @@ public class NanoHTTPD {
                     while (true)
                         new HTTPSession(myServerSocket.accept());
                 } catch (IOException ioe) {
+                    ioe.printStackTrace();
                 }
             }
         });
@@ -241,7 +221,9 @@ public class NanoHTTPD {
             myServerSocket.close();
             myThread.join();
         } catch (IOException ioe) {
+            ioe.printStackTrace();
         } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
@@ -250,7 +232,7 @@ public class NanoHTTPD {
      * and returns the response.
      */
     private class HTTPSession implements Runnable {
-        public HTTPSession(Socket s) {
+        HTTPSession(Socket s) {
             mySocket = s;
             Thread t = new Thread(this);
             t.setDaemon(true);
@@ -294,7 +276,7 @@ public class NanoHTTPD {
                 String method = pre.getProperty("method");
                 String uri = pre.getProperty("uri");
 
-                long size = 0x7FFFFFFFFFFFFFFFl;
+                long size = 0x7FFFFFFFFFFFFFFFL;
                 String contentLength = header.getProperty("content-length");
                 if (contentLength != null) {
                     try {
@@ -317,7 +299,7 @@ public class NanoHTTPD {
                 // expect the first byte of the body at the next read.
                 if (splitbyte < rlen)
                     size -= rlen - splitbyte + 1;
-                else if (splitbyte == 0 || size == 0x7FFFFFFFFFFFFFFFl)
+                else if (splitbyte == 0 || size == 0x7FFFFFFFFFFFFFFFL)
                     size = 0;
 
                 // Now read all the body and write it to f
@@ -360,15 +342,15 @@ public class NanoHTTPD {
                         decodeMultipartData(uri, boundary, fbuf, in, parms, files);
                     } else {
                         // Handle application/x-www-form-urlencoded
-                        String postLine = "";
-                        char pbuf[] = new char[512];
+                        StringBuilder postLine = new StringBuilder();
+                        char[] pbuf = new char[512];
                         int read = in.read(pbuf);
-                        while (read >= 0 && !postLine.endsWith("\r\n")) {
-                            postLine += String.valueOf(pbuf, 0, read);
+                        while (read >= 0 && !postLine.toString().endsWith("\r\n")) {
+                            postLine.append(String.valueOf(pbuf, 0, read));
                             read = in.read(pbuf);
                         }
-                        postLine = postLine.trim();
-                        decodeParms(postLine, parms);
+                        postLine = new StringBuilder(postLine.toString().trim());
+                        decodeParms(postLine.toString(), parms);
                     }
                 }
 
@@ -537,7 +519,7 @@ public class NanoHTTPD {
          * Find the byte positions where multipart boundaries start.
          **/
         @SuppressWarnings("rawtypes")
-        public int[] getBoundaryPositions(byte[] b, byte[] boundary) {
+        int[] getBoundaryPositions(byte[] b, byte[] boundary) {
             int matchcount = 0;
             int matchbyte = -1;
             Vector matchbytes = new Vector();
@@ -602,7 +584,7 @@ public class NanoHTTPD {
          * from the file's data.
          **/
         private int stripMultipartHeaders(byte[] b, int offset) {
-            int i = 0;
+            int i;
             for (i = offset; i < b.length; i++) {
                 if (b[i] == '\r' && b[++i] == '\n' && b[++i] == '\r' && b[++i] == '\n')
                     break;
@@ -615,20 +597,16 @@ public class NanoHTTPD {
             StringTokenizer st = new StringTokenizer(uri, "/ ", true);
             while (st.hasMoreTokens()) {
                 String tok = st.nextToken();
-                switch (tok) {
-                    case "/":
-                        newUri.append("/");
-                        break;
-                    case "%20":
-                        newUri.append(" ");
-                        break;
-                    default:
-                        try {
-                            newUri.append(URLDecoder.decode(tok, "UTF-8"));
-                        } catch (UnsupportedEncodingException e) {
-                            e.printStackTrace();
-                        }
-                        break;
+                if ("/".equals(tok)) {
+                    newUri.append("/");
+                } else if ("%20".equals(tok)) {
+                    newUri.append(" ");
+                } else {
+                    try {
+                        newUri.append(URLDecoder.decode(tok, "UTF-8"));
+                    } catch (UnsupportedEncodingException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
             return newUri.toString();
@@ -762,22 +740,16 @@ public class NanoHTTPD {
         StringTokenizer st = new StringTokenizer(uri, "/ ", true);
         while (st.hasMoreTokens()) {
             String tok = st.nextToken();
-            switch (tok) {
-                case "/":
-                    newUri.append("/");
-                    break;
-                case " ":
-                    newUri.append("%20");
-                    break;
-                default:
-                    try {
-                        newUri.append(URLEncoder.encode(tok, "UTF-8"));
-                    } catch (UnsupportedEncodingException e) {
-                        e.printStackTrace();
-                    }
-                    // For Java 1.4 you'll want to use this instead:
-                    // try { newUri += URLEncoder.encode( tok, "UTF-8" ); } catch ( java.io.UnsupportedEncodingException uee ) {}
-                    break;
+            if ("/".equals(tok)) {
+                newUri.append("/");
+            } else if (" ".equals(tok)) {
+                newUri.append("%20");
+            } else {
+                try {
+                    newUri.append(URLEncoder.encode(tok, "UTF-8"));
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
             }
         }
         return newUri.toString();
@@ -796,8 +768,8 @@ public class NanoHTTPD {
      * Serves file from homeDir and its' subdirectories (only).
      * Uses only URI, ignores all headers and HTTP parameters.
      */
-    public Response serveFile(String uri, Properties header, AndroidFile homeDir,
-                              boolean allowDirectoryListing) {
+    Response serveFile(String uri, Properties header, AndroidFile homeDir,
+                       boolean allowDirectoryListing) {
         Response res = null;
 
         // Make sure we won't die of an exception later
@@ -1035,4 +1007,33 @@ public class NanoHTTPD {
         gmtFrmt.setTimeZone(TimeZone.getTimeZone("GMT"));
     }
 
+    /**
+     * The distribution licence
+     */
+    private static final String LICENCE =
+            "Copyright (C) 2001,2005-2011 by Jarno Elonen <elonen@iki.fi>\n" +
+                    "and Copyright (C) 2010 by Konstantinos Togias <info@ktogias.gr>\n" +
+                    "\n" +
+                    "Redistribution and use in source and binary forms, with or without\n" +
+                    "modification, are permitted provided that the following conditions\n" +
+                    "are met:\n" +
+                    "\n" +
+                    "Redistributions of source code must retain the above copyright notice,\n" +
+                    "this list of conditions and the following disclaimer. Redistributions in\n" +
+                    "binary form must reproduce the above copyright notice, this list of\n" +
+                    "conditions and the following disclaimer in the documentation and/or other\n" +
+                    "materials provided with the distribution. The name of the author may not\n" +
+                    "be used to endorse or promote products derived from this software without\n" +
+                    "specific prior written permission. \n" +
+                    " \n" +
+                    "THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR\n" +
+                    "IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES\n" +
+                    "OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.\n" +
+                    "IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,\n" +
+                    "INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT\n" +
+                    "NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,\n" +
+                    "DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY\n" +
+                    "THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT\n" +
+                    "(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\n" +
+                    "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 }

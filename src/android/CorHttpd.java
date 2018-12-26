@@ -1,4 +1,4 @@
-package com.techprd.cordova.httpd;
+package src.android;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -7,7 +7,6 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Collections;
 
@@ -31,7 +30,7 @@ public class CorHttpd extends CordovaPlugin {
     /**
      * Common tag used for logging statements.
      */
-    private static final String LOGTAG = "CorHttpd";
+    private static final String LOG_TAG = "CorHttpd";
 
     /**
      * Cordova Actions.
@@ -45,12 +44,10 @@ public class CorHttpd extends CordovaPlugin {
     private static final String OPT_PORT = "port";
     private static final String OPT_LOCALHOST_ONLY = "localhost_only";
 
-    private String www_root = "";
     private int port = 8888;
     private boolean localhost_only = false;
 
     private String localPath = "";
-    private WebServer server = null;
     private ArrayList<WebServer> webServers = new ArrayList<WebServer>();
     private String url = "";
 
@@ -70,7 +67,7 @@ public class CorHttpd extends CordovaPlugin {
             result = getLocalPath(inputs, callbackContext);
 
         } else {
-            Log.d(LOGTAG, String.format("Invalid action passed: %s", action));
+            Log.d(LOG_TAG, String.format("Invalid action passed: %s", action));
             result = new PluginResult(Status.INVALID_ACTION);
         }
 
@@ -89,7 +86,7 @@ public class CorHttpd extends CordovaPlugin {
                         if (addr instanceof Inet4Address) {
                             String sAddr = addr.getHostAddress().toUpperCase();
                             if (intf.getDisplayName().startsWith("wlan")) {
-                                Log.w(LOGTAG, "local IP: " + sAddr);
+                                Log.w(LOG_TAG, "local IP: " + sAddr);
                                 return sAddr;
                             }
                         }
@@ -97,19 +94,19 @@ public class CorHttpd extends CordovaPlugin {
                 }
             }
         } catch (SocketException ex) {
-            Log.e(LOGTAG, ex.toString());
+            Log.e(LOG_TAG, ex.toString());
         }
 
         return "127.0.0.1";
     }
 
     private PluginResult startServer(JSONArray inputs, CallbackContext callbackContext) {
-        Log.w(LOGTAG, "startServer");
+        Log.d(LOG_TAG, "startServer");
 
         JSONObject options = inputs.optJSONObject(0);
         if (options == null) return null;
 
-        www_root = options.optString(OPT_WWW_ROOT);
+        String www_root = options.optString(OPT_WWW_ROOT);
         port = options.optInt(OPT_PORT, 8888);
         localhost_only = options.optBoolean(OPT_LOCALHOST_ONLY, false);
 
@@ -155,6 +152,7 @@ public class CorHttpd extends CordovaPlugin {
             AssetManager am = ctx.getResources().getAssets();
             f.setAssetManager(am);
 
+            WebServer server = null;
             if (localhost_only) {
                 InetSocketAddress localAddr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), port);
                 server = new WebServer(localAddr, f);
@@ -165,7 +163,7 @@ public class CorHttpd extends CordovaPlugin {
             }
         } catch (IOException e) {
             errmsg = String.format("IO Exception: %s", e.getMessage());
-            Log.w(LOGTAG, errmsg);
+            Log.w(LOG_TAG, errmsg);
         }
         return errmsg;
     }
@@ -180,21 +178,21 @@ public class CorHttpd extends CordovaPlugin {
     }
 
     private PluginResult getURL(JSONArray inputs, CallbackContext callbackContext) {
-        Log.w(LOGTAG, "getURL");
+        Log.d(LOG_TAG, "getURL");
 
         callbackContext.success(this.url);
         return null;
     }
 
     private PluginResult getLocalPath(JSONArray inputs, CallbackContext callbackContext) {
-        Log.w(LOGTAG, "getLocalPath");
+        Log.d(LOG_TAG, "getLocalPath");
 
         callbackContext.success(this.localPath);
         return null;
     }
 
     private PluginResult stopServer(JSONArray inputs, CallbackContext callbackContext) {
-        Log.w(LOGTAG, "stopServer");
+        Log.d(LOG_TAG, "stopServer");
 
         final CallbackContext delayCallback = callbackContext;
         cordova.getActivity().runOnUiThread(new Runnable() {
