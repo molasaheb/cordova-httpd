@@ -23,7 +23,7 @@
 
         <config-file parent="/*" target="res/xml/config.xml">
             <feature name="CorHttpd">
-                <param name="android-package" value="src.com.techprd.cordova.httpd.CorHttpd" />
+                <param name="android-package" value="com.techprd.cordova.httpd.CorHttpd" />
             </feature>
         </config-file>
 
