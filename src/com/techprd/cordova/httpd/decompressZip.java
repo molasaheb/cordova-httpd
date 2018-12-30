@@ -1,4 +1,4 @@
-package src.com.techprd.cordova.httpd;
+package com.techprd.cordova.httpd;
 
 import org.json.JSONObject;
 

@@ -1,17 +1,42 @@
-package src.com.techprd.cordova.httpd;
+package com.techprd.cordova.httpd;
 
+import android.content.Context;
 import android.util.Log;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.Hashtable;
+import java.util.Locale;
+import java.util.Properties;
+import java.util.StringTokenizer;
+import java.util.TimeZone;
+import java.util.Vector;
 
 @SuppressWarnings("unchecked")
 public class NanoHTTPD {
-    private final String LOG_TAG = "NanoHTTPD2";
-
+    private final String LOG_TAG = "NanoHTTPD";
+    private PhotoLibraryService photoLibraryService;
+    private Context context;
     // ==================================================
     // API parts
     // ==================================================
@@ -30,6 +55,7 @@ public class NanoHTTPD {
     @SuppressWarnings("rawtypes")
     public Response serve(String uri, String method, Properties header, Properties parms, Properties files) throws IOException {
         Log.i(LOG_TAG, method + " '" + uri + "' ");
+        Log.i(LOG_TAG, method + " uri.contains(\"api\")'" + uri.contains("api") + "' ");
         Log.i(LOG_TAG, "root directory" + " '" + myRootDir + "' ");
         Log.i(LOG_TAG, "zip download" + " '" + ZIP_DOWNLOAD + "' ");
         if (ZIP_DOWNLOAD) {
@@ -49,29 +75,33 @@ public class NanoHTTPD {
                 return serveFile(uri, header, myRootDir, true);
             }
 
+        } else if (uri.contains("api")) {
+            return serveJson(uri, header, parms);
         } else if (uri.contains("dashboard")) {
             return serveFile("/", header, myRootDir, true);
         } else {
-//            Enumeration e = header.propertyNames();
-//            while (e.hasMoreElements()) {
-//                String value = (String) e.nextElement();
-//                Log.i(LOG_TAG, "  HDR: '" + value + "' = '" + header.getProperty(value) + "'");
-//            }
-//
-//            e = parms.propertyNames();
-//            while (e.hasMoreElements()) {
-//                String value = (String) e.nextElement();
-//                Log.i(LOG_TAG, "  PRM: '" + value + "' = '" + parms.getProperty(value) + "'");
-//            }
-//
-//            e = files.propertyNames();
-//            while (e.hasMoreElements()) {
-//                String value = (String) e.nextElement();
-//                Log.i(LOG_TAG, "  UPLOADED: '" + value + "' = '" + files.getProperty(value) + "'");
-//            }
             return serveFile(uri, header, myRootDir, true);
         }
 
+    }
+
+    private Response serveJson(String uri, Properties header, Properties parms) {
+
+        if (uri.contains("get-photo-albums")) {
+            try {
+                ArrayList<JSONObject> msg = photoLibraryService.getAlbums(this.context);
+                Response res = new Response(HTTP_OK, MIME_JSON, msg.toString());
+                res.addHeader("Access-Control-Allow-Origin", "*");
+                res.addHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type");
+                return res;
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return new Response(HTTP_INTERNALERROR, MIME_JSON,
+                        "{'error': 500, message: 'Failed to get albums'}");
+            }
+        }
+
+        return new Response(HTTP_NOTFOUND, MIME_JSON, "");
     }
 
     /**
@@ -159,6 +189,7 @@ public class NanoHTTPD {
     public static final String
             MIME_PLAINTEXT = "text/plain",
             MIME_HTML = "text/html",
+            MIME_JSON = "application/json",
             MIME_DEFAULT_BINARY = "application/octet-stream",
             MIME_XML = "text/xml";
     boolean FORCE_DOWNLOAD = false;
@@ -172,7 +203,9 @@ public class NanoHTTPD {
      * Starts a HTTP server to given port.<p>
      * Throws an IOException if the socket is already in use
      */
-    public NanoHTTPD(InetSocketAddress localAddr, AndroidFile wwwroot) throws IOException {
+    public NanoHTTPD(InetSocketAddress localAddr, AndroidFile wwwroot, Context context) throws IOException {
+        photoLibraryService = PhotoLibraryService.getInstance();
+        this.context = context;
         myTcpPort = localAddr.getPort();
         myRootDir = wwwroot;
         myServerSocket = new ServerSocket();
@@ -192,10 +225,12 @@ public class NanoHTTPD {
     }
 
     /**
-     * Starts a HTTP server to given port.<p>
+     * Starts a HTTP server to given port.
      * Throws an IOException if the socket is already in use
      */
-    public NanoHTTPD(int port, AndroidFile wwwroot) throws IOException {
+    public NanoHTTPD(int port, AndroidFile wwwroot, Context context) throws IOException {
+        photoLibraryService = PhotoLibraryService.getInstance();
+        this.context = context;
         myTcpPort = port;
         this.myRootDir = wwwroot;
         myServerSocket = new ServerSocket(myTcpPort);
@@ -220,10 +255,8 @@ public class NanoHTTPD {
         try {
             myServerSocket.close();
             myThread.join();
-        } catch (IOException ioe) {
+        } catch (IOException | InterruptedException ioe) {
             ioe.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
     }
 

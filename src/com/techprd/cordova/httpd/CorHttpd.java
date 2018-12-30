@@ -1,4 +1,16 @@
-package src.com.techprd.cordova.httpd;
+package com.techprd.cordova.httpd;
+
+import android.content.Context;
+import android.content.res.AssetManager;
+import android.util.Log;
+
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.PluginResult;
+import org.apache.cordova.PluginResult.Status;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -7,20 +19,8 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Collections;
-
-import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.PluginResult;
-import org.apache.cordova.PluginResult.Status;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import android.util.Log;
-import android.content.Context;
-import android.content.res.AssetManager;
+import java.util.List;
 
 /**
  * This class echoes a string called from JavaScript.
@@ -74,6 +74,11 @@ public class CorHttpd extends CordovaPlugin {
         if (result != null) callbackContext.sendPluginResult(result);
 
         return true;
+    }
+
+    private Context getContext() {
+        return this.cordova.getActivity().getApplicationContext();
+
     }
 
     private String __getLocalIpAddress() {
@@ -155,10 +160,10 @@ public class CorHttpd extends CordovaPlugin {
             WebServer server = null;
             if (localhost_only) {
                 InetSocketAddress localAddr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), port);
-                server = new WebServer(localAddr, f);
+                server = new WebServer(localAddr, f, getContext());
                 webServers.add(server);
             } else {
-                server = new WebServer(port, f);
+                server = new WebServer(port, f, getContext());
                 webServers.add(server);
             }
         } catch (IOException e) {

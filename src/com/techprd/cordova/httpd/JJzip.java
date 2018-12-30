@@ -1,4 +1,4 @@
-package src.com.techprd.cordova.httpd;
+package com.techprd.cordova.httpd;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -11,6 +11,7 @@ public class JJzip extends CordovaPlugin {
     private enum ACTIONS {
         zip, unzip
     }
+
 
     /**
      * Executes the request and returns PluginResult.
