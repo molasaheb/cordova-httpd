@@ -3,6 +3,7 @@ package com.techprd.cordova.httpd;
 import android.content.Context;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -25,6 +26,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Locale;
 import java.util.Properties;
@@ -35,7 +37,7 @@ import java.util.Vector;
 @SuppressWarnings("unchecked")
 public class NanoHTTPD {
     private final String LOG_TAG = "NanoHTTPD";
-    private PhotoLibraryService photoLibraryService;
+    private com.techprd.cordova.httpd.PhotoLibraryService photoLibraryService;
     private Context context;
     // ==================================================
     // API parts
@@ -64,7 +66,7 @@ public class NanoHTTPD {
                 options.put("sourceEntry", myRootDir + uri);
                 options.put("sourcePath", uri);
                 options.put("targetPath", myRootDir + "/filetransfer");
-                compressZip makeZip = new compressZip(options);
+                com.techprd.cordova.httpd.compressZip makeZip = new com.techprd.cordova.httpd.compressZip(options);
                 makeZip.zip();
                 ZIP_DOWNLOAD = false;
                 uri = "/filetransfer.zip";
@@ -87,21 +89,86 @@ public class NanoHTTPD {
 
     private Response serveJson(String uri, Properties header, Properties parms) {
 
+        String data = "";
         if (uri.contains("get-photo-albums")) {
             try {
-                ArrayList<JSONObject> msg = photoLibraryService.getAlbums(this.context);
-                Response res = new Response(HTTP_OK, MIME_JSON, msg.toString());
-                res.addHeader("Access-Control-Allow-Origin", "*");
-                res.addHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type");
-                return res;
+                JSONObject photoAlbums = photoLibraryService.getPhotoAlbums(this.context);
+                data = photoAlbums.toString();
             } catch (JSONException e) {
                 e.printStackTrace();
                 return new Response(HTTP_INTERNALERROR, MIME_JSON,
                         "{'error': 500, message: 'Failed to get albums'}");
             }
-        }
+        } else if (uri.contains("get-photos")) {
+            try {
+                String album = parms.getProperty("ALBUM");
+                String limit = parms.getProperty("LIMIT");
+                String offset = parms.getProperty("OFFSET");
+                if (limit == null || offset == null || album == null ||
+                        limit.equals("") || offset.equals("") || album.equals("")) {
+                    return new Response(HTTP_BADREQUEST, MIME_JSON,
+                            "BAD REQUEST: no LIMIT or OFFSET HEADER presented.");
+                }
 
-        return new Response(HTTP_NOTFOUND, MIME_JSON, "");
+                JSONObject photos = photoLibraryService.getPhotos(context,
+                        album,
+                        Integer.parseInt(limit), Integer.parseInt(offset));
+                data = photos.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else if (uri.contains("get-videos")) {
+            try {
+                String album = parms.getProperty("ALBUM");
+                String limit = parms.getProperty("LIMIT");
+                String offset = parms.getProperty("OFFSET");
+                if (limit == null || offset == null || album == null ||
+                        limit.equals("") || offset.equals("") || album.equals("")) {
+                    return new Response(HTTP_BADREQUEST, MIME_JSON,
+                            "BAD REQUEST: no LIMIT or OFFSET HEADER presented.");
+                }
+
+                JSONObject videos = photoLibraryService.getVideos(context,
+                        album,
+                        Integer.parseInt(limit), Integer.parseInt(offset));
+                data = videos.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else if (uri.contains("get-music-albums")) {
+            try {
+                JSONObject musicAlbums = photoLibraryService.getMusicAlbums(this.context);
+                data = musicAlbums.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return new Response(HTTP_INTERNALERROR, MIME_JSON,
+                        "{'error': 500, message: 'Failed to get albums'}");
+            }
+        } else if (uri.contains("get-musics")) {
+            try {
+                JSONObject musics = photoLibraryService.getMusics(context);
+                data = musics.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else if (uri.contains("get-music-album-cover")) {
+            String albumId = parms.getProperty("ALBUM_ID");
+            if (albumId == null || albumId.equals("")) {
+                return new Response(HTTP_BADREQUEST, MIME_JSON,
+                        "BAD REQUEST: no albumId HEADER presented.");
+            }
+            JSONObject albumCover = null;
+            try {
+                albumCover = photoLibraryService.getMusicAlbumCover(context, albumId);
+                data = albumCover.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        Response res = new Response(HTTP_OK, MIME_JSON, data);
+        res.addHeader("Access-Control-Allow-Origin", "*");
+        res.addHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type");
+        return res;
     }
 
     /**
@@ -203,8 +270,8 @@ public class NanoHTTPD {
      * Starts a HTTP server to given port.<p>
      * Throws an IOException if the socket is already in use
      */
-    public NanoHTTPD(InetSocketAddress localAddr, AndroidFile wwwroot, Context context) throws IOException {
-        photoLibraryService = PhotoLibraryService.getInstance();
+    public NanoHTTPD(InetSocketAddress localAddr, com.techprd.cordova.httpd.AndroidFile wwwroot, Context context) throws IOException {
+        photoLibraryService = com.techprd.cordova.httpd.PhotoLibraryService.getInstance();
         this.context = context;
         myTcpPort = localAddr.getPort();
         myRootDir = wwwroot;
@@ -228,8 +295,8 @@ public class NanoHTTPD {
      * Starts a HTTP server to given port.
      * Throws an IOException if the socket is already in use
      */
-    public NanoHTTPD(int port, AndroidFile wwwroot, Context context) throws IOException {
-        photoLibraryService = PhotoLibraryService.getInstance();
+    public NanoHTTPD(int port, com.techprd.cordova.httpd.AndroidFile wwwroot, Context context) throws IOException {
+        photoLibraryService = com.techprd.cordova.httpd.PhotoLibraryService.getInstance();
         this.context = context;
         myTcpPort = port;
         this.myRootDir = wwwroot;
@@ -589,7 +656,7 @@ public class NanoHTTPD {
             if (len > 0) {
 
                 try {
-                    AndroidFile dir = new AndroidFile(myRootDir, uri);
+                    com.techprd.cordova.httpd.AndroidFile dir = new com.techprd.cordova.httpd.AndroidFile(myRootDir, uri);
                     File temp = new File(dir, filename);
 
                     Log.d(LOG_TAG, "can dir write: " + dir.getAbsolutePath() + " " + dir.canWrite());
@@ -791,7 +858,7 @@ public class NanoHTTPD {
     private int myTcpPort;
     private final ServerSocket myServerSocket;
     private Thread myThread;
-    private AndroidFile myRootDir;
+    private com.techprd.cordova.httpd.AndroidFile myRootDir;
 
     // ==================================================
     // File server code
@@ -801,7 +868,7 @@ public class NanoHTTPD {
      * Serves file from homeDir and its' subdirectories (only).
      * Uses only URI, ignores all headers and HTTP parameters.
      */
-    Response serveFile(String uri, Properties header, AndroidFile homeDir,
+    Response serveFile(String uri, Properties header, com.techprd.cordova.httpd.AndroidFile homeDir,
                        boolean allowDirectoryListing) {
         Response res = null;
 
@@ -822,7 +889,7 @@ public class NanoHTTPD {
                 res = new Response(HTTP_FORBIDDEN, MIME_PLAINTEXT,
                         "FORBIDDEN: Won't serve ../ for security reasons.");
         }
-        AndroidFile f = new AndroidFile(homeDir, uri);
+        com.techprd.cordova.httpd.AndroidFile f = new com.techprd.cordova.httpd.AndroidFile(homeDir, uri);
         Log.d(LOG_TAG, " serveFile uri: " + uri);
         Log.d(LOG_TAG, " serveFile res: " + res);
         if (res == null && !f.exists())
@@ -845,10 +912,10 @@ public class NanoHTTPD {
 
             if (res == null) {
                 // First try index.html and index.htm
-                if (new AndroidFile(f, "index.html").exists())
-                    f = new AndroidFile(homeDir, uri + "/index.html");
-                else if (new AndroidFile(f, "index.htm").exists())
-                    f = new AndroidFile(homeDir, uri + "/index.htm");
+                if (new com.techprd.cordova.httpd.AndroidFile(f, "index.html").exists())
+                    f = new com.techprd.cordova.httpd.AndroidFile(homeDir, uri + "/index.html");
+                else if (new com.techprd.cordova.httpd.AndroidFile(f, "index.htm").exists())
+                    f = new com.techprd.cordova.httpd.AndroidFile(homeDir, uri + "/index.htm");
                     // No index file, list the directory if it is readable
                 else if (allowDirectoryListing && f.canRead()) {
                     String[] files = f.list();
@@ -863,7 +930,7 @@ public class NanoHTTPD {
 
                     if (files != null) {
                         for (int i = 0; i < files.length; ++i) {
-                            AndroidFile curFile = new AndroidFile(f, files[i]);
+                            com.techprd.cordova.httpd.AndroidFile curFile = new com.techprd.cordova.httpd.AndroidFile(f, files[i]);
                             boolean dir = curFile.isDirectory();
                             if (dir) {
                                 msg.append("<b>");
