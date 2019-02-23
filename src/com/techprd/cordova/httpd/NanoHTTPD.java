@@ -37,7 +37,7 @@ import java.util.Vector;
 @SuppressWarnings("unchecked")
 public class NanoHTTPD {
     private final String LOG_TAG = "NanoHTTPD";
-    private com.techprd.cordova.httpd.PhotoLibraryService photoLibraryService;
+    private PhotoLibraryService photoLibraryService;
     private Context context;
     // ==================================================
     // API parts
@@ -66,7 +66,7 @@ public class NanoHTTPD {
                 options.put("sourceEntry", myRootDir + uri);
                 options.put("sourcePath", uri);
                 options.put("targetPath", myRootDir + "/filetransfer");
-                com.techprd.cordova.httpd.compressZip makeZip = new com.techprd.cordova.httpd.compressZip(options);
+                compressZip makeZip = new compressZip(options);
                 makeZip.zip();
                 ZIP_DOWNLOAD = false;
                 uri = "/filetransfer.zip";
@@ -99,6 +99,15 @@ public class NanoHTTPD {
                 return new Response(HTTP_INTERNALERROR, MIME_JSON,
                         "{'error': 500, message: 'Failed to get albums'}");
             }
+        } else if (uri.contains("get-video-albums")) {
+            try {
+                JSONObject photoAlbums = photoLibraryService.getVideoAlbums(this.context);
+                data = photoAlbums.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return new Response(HTTP_INTERNALERROR, MIME_JSON,
+                        "{'error': 500, message: 'Failed to get albums'}");
+            }
         } else if (uri.contains("get-photos")) {
             try {
                 String album = parms.getProperty("ALBUM");
@@ -113,6 +122,19 @@ public class NanoHTTPD {
                 JSONObject photos = photoLibraryService.getPhotos(context,
                         album,
                         Integer.parseInt(limit), Integer.parseInt(offset));
+                data = photos.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else if (uri.contains("get-photos-thumbnail")) {
+            try {
+                String path = parms.getProperty("PATH");
+                if (path == null || path.equals("")) {
+                    return new Response(HTTP_BADREQUEST, MIME_JSON,
+                            "BAD REQUEST: no path HEADER presented.");
+                }
+
+                JSONObject photos = photoLibraryService.getPhotosThumbnail(context, path);
                 data = photos.toString();
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -270,8 +292,8 @@ public class NanoHTTPD {
      * Starts a HTTP server to given port.<p>
      * Throws an IOException if the socket is already in use
      */
-    public NanoHTTPD(InetSocketAddress localAddr, com.techprd.cordova.httpd.AndroidFile wwwroot, Context context) throws IOException {
-        photoLibraryService = com.techprd.cordova.httpd.PhotoLibraryService.getInstance();
+    public NanoHTTPD(InetSocketAddress localAddr, AndroidFile wwwroot, Context context) throws IOException {
+        photoLibraryService = PhotoLibraryService.getInstance();
         this.context = context;
         myTcpPort = localAddr.getPort();
         myRootDir = wwwroot;
@@ -295,8 +317,8 @@ public class NanoHTTPD {
      * Starts a HTTP server to given port.
      * Throws an IOException if the socket is already in use
      */
-    public NanoHTTPD(int port, com.techprd.cordova.httpd.AndroidFile wwwroot, Context context) throws IOException {
-        photoLibraryService = com.techprd.cordova.httpd.PhotoLibraryService.getInstance();
+    public NanoHTTPD(int port, AndroidFile wwwroot, Context context) throws IOException {
+        photoLibraryService = PhotoLibraryService.getInstance();
         this.context = context;
         myTcpPort = port;
         this.myRootDir = wwwroot;
@@ -656,7 +678,7 @@ public class NanoHTTPD {
             if (len > 0) {
 
                 try {
-                    com.techprd.cordova.httpd.AndroidFile dir = new com.techprd.cordova.httpd.AndroidFile(myRootDir, uri);
+                    AndroidFile dir = new AndroidFile(myRootDir, uri);
                     File temp = new File(dir, filename);
 
                     Log.d(LOG_TAG, "can dir write: " + dir.getAbsolutePath() + " " + dir.canWrite());
@@ -858,7 +880,7 @@ public class NanoHTTPD {
     private int myTcpPort;
     private final ServerSocket myServerSocket;
     private Thread myThread;
-    private com.techprd.cordova.httpd.AndroidFile myRootDir;
+    private AndroidFile myRootDir;
 
     // ==================================================
     // File server code
@@ -868,7 +890,7 @@ public class NanoHTTPD {
      * Serves file from homeDir and its' subdirectories (only).
      * Uses only URI, ignores all headers and HTTP parameters.
      */
-    Response serveFile(String uri, Properties header, com.techprd.cordova.httpd.AndroidFile homeDir,
+    Response serveFile(String uri, Properties header, AndroidFile homeDir,
                        boolean allowDirectoryListing) {
         Response res = null;
 
@@ -889,7 +911,7 @@ public class NanoHTTPD {
                 res = new Response(HTTP_FORBIDDEN, MIME_PLAINTEXT,
                         "FORBIDDEN: Won't serve ../ for security reasons.");
         }
-        com.techprd.cordova.httpd.AndroidFile f = new com.techprd.cordova.httpd.AndroidFile(homeDir, uri);
+        AndroidFile f = new AndroidFile(homeDir, uri);
         Log.d(LOG_TAG, " serveFile uri: " + uri);
         Log.d(LOG_TAG, " serveFile res: " + res);
         if (res == null && !f.exists())
@@ -912,10 +934,10 @@ public class NanoHTTPD {
 
             if (res == null) {
                 // First try index.html and index.htm
-                if (new com.techprd.cordova.httpd.AndroidFile(f, "index.html").exists())
-                    f = new com.techprd.cordova.httpd.AndroidFile(homeDir, uri + "/index.html");
-                else if (new com.techprd.cordova.httpd.AndroidFile(f, "index.htm").exists())
-                    f = new com.techprd.cordova.httpd.AndroidFile(homeDir, uri + "/index.htm");
+                if (new AndroidFile(f, "index.html").exists())
+                    f = new AndroidFile(homeDir, uri + "/index.html");
+                else if (new AndroidFile(f, "index.htm").exists())
+                    f = new AndroidFile(homeDir, uri + "/index.htm");
                     // No index file, list the directory if it is readable
                 else if (allowDirectoryListing && f.canRead()) {
                     String[] files = f.list();
@@ -930,7 +952,7 @@ public class NanoHTTPD {
 
                     if (files != null) {
                         for (int i = 0; i < files.length; ++i) {
-                            com.techprd.cordova.httpd.AndroidFile curFile = new com.techprd.cordova.httpd.AndroidFile(f, files[i]);
+                            AndroidFile curFile = new AndroidFile(f, files[i]);
                             boolean dir = curFile.isDirectory();
                             if (dir) {
                                 msg.append("<b>");
