@@ -3,7 +3,8 @@ package com.techprd.cordova.httpd;
 import android.content.Context;
 import android.util.Log;
 
-import org.json.JSONArray;
+import com.techprd.cordova.provider.PhotoLibraryService;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -23,10 +24,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Locale;
 import java.util.Properties;
@@ -126,19 +125,6 @@ public class NanoHTTPD {
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-        } else if (uri.contains("get-photos-thumbnail")) {
-            try {
-                String path = parms.getProperty("PATH");
-                if (path == null || path.equals("")) {
-                    return new Response(HTTP_BADREQUEST, MIME_JSON,
-                            "BAD REQUEST: no path HEADER presented.");
-                }
-
-                JSONObject photos = photoLibraryService.getPhotosThumbnail(context, path);
-                data = photos.toString();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
         } else if (uri.contains("get-videos")) {
             try {
                 String album = parms.getProperty("ALBUM");
@@ -223,7 +209,7 @@ public class NanoHTTPD {
             this.mimeType = mimeType;
             try {
                 this.data = new ByteArrayInputStream(txt.getBytes("UTF-8"));
-            } catch (java.io.UnsupportedEncodingException uee) {
+            } catch (UnsupportedEncodingException uee) {
                 uee.printStackTrace();
             }
         }

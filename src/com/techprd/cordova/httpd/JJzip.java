@@ -33,12 +33,12 @@ public class JJzip extends CordovaPlugin {
         switch (ACTIONS.valueOf(action)) {
             case zip:
                 actionType = "compress";
-                compressZip makeZip = new compressZip(validOptions);
+                CompressZip makeZip = new CompressZip(validOptions);
                 result = makeZip.zip();
                 break;
             case unzip:
                 actionType = "decompress";
-                decompressZip unZip = new decompressZip(validOptions);
+                DecompressZip unZip = new DecompressZip(validOptions);
                 result = unZip.unZip();
                 break;
             default:
