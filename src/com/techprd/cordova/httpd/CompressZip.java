@@ -11,14 +11,14 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public class compressZip {
+public class CompressZip {
 
     private String sourceEntry = "";
     private String targetPath = "";
     private String sourcePath = "";
     private String targetName = "";
 
-    public compressZip(JSONObject options) {
+    public CompressZip(JSONObject options) {
         this.sourceEntry = options.optString("sourceEntry");
         this.targetPath = options.optString("targetPath");
         this.sourcePath = options.optString("sourcePath");

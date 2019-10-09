@@ -3,6 +3,8 @@ package com.techprd.cordova.httpd;
 import android.content.Context;
 import android.util.Log;
 
+import com.techprd.cordova.provider.PhotoLibraryService;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -22,7 +24,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -87,21 +88,95 @@ public class NanoHTTPD {
 
     private Response serveJson(String uri, Properties header, Properties parms) {
 
+        String data = "";
         if (uri.contains("get-photo-albums")) {
             try {
-                ArrayList<JSONObject> msg = photoLibraryService.getAlbums(this.context);
-                Response res = new Response(HTTP_OK, MIME_JSON, msg.toString());
-                res.addHeader("Access-Control-Allow-Origin", "*");
-                res.addHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type");
-                return res;
+                JSONObject photoAlbums = photoLibraryService.getPhotoAlbums(this.context);
+                data = photoAlbums.toString();
             } catch (JSONException e) {
                 e.printStackTrace();
                 return new Response(HTTP_INTERNALERROR, MIME_JSON,
                         "{'error': 500, message: 'Failed to get albums'}");
             }
-        }
+        } else if (uri.contains("get-video-albums")) {
+            try {
+                JSONObject photoAlbums = photoLibraryService.getVideoAlbums(this.context);
+                data = photoAlbums.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return new Response(HTTP_INTERNALERROR, MIME_JSON,
+                        "{'error': 500, message: 'Failed to get albums'}");
+            }
+        } else if (uri.contains("get-photos")) {
+            try {
+                String album = parms.getProperty("ALBUM");
+                String limit = parms.getProperty("LIMIT");
+                String offset = parms.getProperty("OFFSET");
+                if (limit == null || offset == null || album == null ||
+                        limit.equals("") || offset.equals("") || album.equals("")) {
+                    return new Response(HTTP_BADREQUEST, MIME_JSON,
+                            "BAD REQUEST: no LIMIT or OFFSET HEADER presented.");
+                }
 
-        return new Response(HTTP_NOTFOUND, MIME_JSON, "");
+                JSONObject photos = photoLibraryService.getPhotos(context,
+                        album,
+                        Integer.parseInt(limit), Integer.parseInt(offset));
+                data = photos.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else if (uri.contains("get-videos")) {
+            try {
+                String album = parms.getProperty("ALBUM");
+                String limit = parms.getProperty("LIMIT");
+                String offset = parms.getProperty("OFFSET");
+                if (limit == null || offset == null || album == null ||
+                        limit.equals("") || offset.equals("") || album.equals("")) {
+                    return new Response(HTTP_BADREQUEST, MIME_JSON,
+                            "BAD REQUEST: no LIMIT or OFFSET HEADER presented.");
+                }
+
+                JSONObject videos = photoLibraryService.getVideos(context,
+                        album,
+                        Integer.parseInt(limit), Integer.parseInt(offset));
+                data = videos.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else if (uri.contains("get-music-albums")) {
+            try {
+                JSONObject musicAlbums = photoLibraryService.getMusicAlbums(this.context);
+                data = musicAlbums.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return new Response(HTTP_INTERNALERROR, MIME_JSON,
+                        "{'error': 500, message: 'Failed to get albums'}");
+            }
+        } else if (uri.contains("get-musics")) {
+            try {
+                JSONObject musics = photoLibraryService.getMusics(context);
+                data = musics.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else if (uri.contains("get-music-album-cover")) {
+            String albumId = parms.getProperty("ALBUM_ID");
+            if (albumId == null || albumId.equals("")) {
+                return new Response(HTTP_BADREQUEST, MIME_JSON,
+                        "BAD REQUEST: no albumId HEADER presented.");
+            }
+            JSONObject albumCover = null;
+            try {
+                albumCover = photoLibraryService.getMusicAlbumCover(context, albumId);
+                data = albumCover.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        Response res = new Response(HTTP_OK, MIME_JSON, data);
+        res.addHeader("Access-Control-Allow-Origin", "*");
+        res.addHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type");
+        return res;
     }
 
     /**
@@ -134,7 +209,7 @@ public class NanoHTTPD {
             this.mimeType = mimeType;
             try {
                 this.data = new ByteArrayInputStream(txt.getBytes("UTF-8"));
-            } catch (java.io.UnsupportedEncodingException uee) {
+            } catch (UnsupportedEncodingException uee) {
                 uee.printStackTrace();
             }
         }

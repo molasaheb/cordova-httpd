@@ -10,12 +10,12 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public class decompressZip {
+public class DecompressZip {
 
     private String sourceEntry = "";
     private String targetPath = "";
 
-    public decompressZip(JSONObject opts) {
+    public DecompressZip(JSONObject opts) {
         this.sourceEntry = opts.optString("sourceEntry");
         this.targetPath = opts.optString("targetPath");
     }
